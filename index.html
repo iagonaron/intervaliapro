@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INTERVALIA PRO · LMPRO</title>
+<script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.3/build/cjs/vexflow.js"></script>
+<style>
+  :root{
+    --bg:#160f04; --panel:#1a1305; --panel2:#221908; --line:#3a2c10;
+    --ink:#fbf7ec; --muted:#d8caa6; --muted2:#a8966a; --paper:#ffffff;
+    --accent:#5a4715; --accent-soft:rgba(212,175,55,0.12);
+    --green:#22c98a; --green-soft:rgba(34,201,138,.18);
+    --amber:#f5a623; --red:#ff5c72;
+    --gold1:#d4af37; --gold2:#b8860b; --gold-soft:#e9c96a;
+    /* paleta de intervalos (extraída del libro) — se conserva igual */
+    --i2m:#a62c17; --i2M:#ed732e; --i3m:#2f6b1e; --i3M:#9ed649;
+    --i4J:#2355ce; --iTT:#f3ec4e; --i5J:#5ac4f7; --i6m:#8c33b6;
+    --i6M:#d796f8; --i7m:#5a2d05; --i7M:#c98a1e; --i8J:#000000;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  html{background:#0a0702}
+  body{
+    margin:0; color:var(--ink);
+    font-family:"Helvetica Neue",Arial,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:8px 26px 16px; display:flex; flex-direction:column; min-height:100%;
+    position:relative;
+  }
+  /* fondo dorado del portal Pro */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-2; pointer-events:none;
+    background:linear-gradient(180deg, #4d3a0b 0%, #2e2308 32%, #160f04 70%, #0a0702 100%);
+  }
+  .home2,.ath{font-style:italic;font-family:Georgia,'Times New Roman',serif;font-weight:500;color:#cbb98a;transform:rotate(-3deg);display:inline-block}
+  @keyframes noteShake{
+    0%,100%{transform:translateX(0)}
+    15%{transform:translateX(-2.5px)} 30%{transform:translateX(2.5px)}
+    45%{transform:translateX(-2px)} 60%{transform:translateX(2px)}
+    75%{transform:translateX(-1px)} 90%{transform:translateX(1px)}
+  }
+  /* overlay de resultado a pantalla completa (estilo cuenta atrás) */
+  #resultOverlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;
+    background:rgba(6,10,24,.62);pointer-events:none}
+  #resultOverlay.on{display:flex;animation:resultPop .35s ease-out}
+  @keyframes resultPop{0%{opacity:0;transform:scale(.92)}100%{opacity:1;transform:scale(1)}}
+  .result-inner{text-align:center;line-height:1}
+  .result-score{font-size:min(34vw,300px);font-weight:900;letter-spacing:-.04em;
+    font-variant-numeric:tabular-nums;text-shadow:0 6px 50px rgba(0,0,0,.45)}
+  .result-msg{font-size:min(6vw,34px);font-weight:800;margin-top:10px;letter-spacing:.02em;max-width:18ch;margin-left:auto;margin-right:auto;line-height:1.2}
+  #resultOverlay.good .result-score,#resultOverlay.good .result-msg{color:#22c98a}
+  #resultOverlay.mid  .result-score,#resultOverlay.mid  .result-msg{color:#f5a623}
+  #resultOverlay.low  .result-score,#resultOverlay.low  .result-msg{color:#ff8a3d}
+  #resultOverlay.bad  .result-score,#resultOverlay.bad  .result-msg{color:#ff5c72}
+  /* modal de bienvenida (selección de intervalos al abrir) */
+  #welcomeModal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+    background:rgba(4,7,18,.78);padding:20px}
+  #welcomeModal.hidden{display:none}
+  .wm-card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid rgba(212,175,55,.35);
+    border-radius:20px;padding:28px 30px;max-width:840px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  .wm-title{margin:0 0 6px;font-size:22px;font-weight:900;color:var(--ink)}
+  .wm-sub{margin:0 0 18px;font-size:13.5px;color:var(--muted);line-height:1.5}
+  .wm-card .ivals{flex-wrap:nowrap;justify-content:center;gap:6px;margin-bottom:22px}
+  .wm-card .ival{width:46px;height:46px;flex:0 0 46px;font-size:13px}
+  .wm-btns{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+  .wm-accept{border:none;border-radius:12px;padding:13px 30px;font-size:15px;font-weight:900;cursor:pointer;
+    letter-spacing:.08em;color:#1a1407;background:linear-gradient(135deg,var(--gold1),var(--gold2));transition:transform .05s,filter .15s}
+  .wm-accept:hover{filter:brightness(1.08)}
+  .wm-accept:active{transform:scale(.97)}
+
+  /* topinfo */
+  .topinfo{display:flex;justify-content:flex-end;align-items:baseline;gap:7px;margin:0 0 6px;line-height:1}
+  .topinfo-by{font-size:11.5px;letter-spacing:.03em;color:var(--muted2)}
+  .topinfo-sep{font-size:11px;color:var(--muted2)}
+  .topinfo-opt{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2)}
+
+  /* cabecera marca */
+  .header-bar{position:relative;margin-bottom:4px}
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:nowrap}
+  .brand{display:flex;align-items:baseline;gap:13px;flex-wrap:wrap}
+  .brand h1{font-size:30px;font-weight:800;margin:0;letter-spacing:-0.6px;line-height:1.1}
+  .brand-link{text-decoration:none;color:inherit;cursor:pointer;transition:opacity .15s}
+  .brand-link:hover{opacity:.82}
+  .brand .lm{color:var(--ink);font-weight:900}
+  .brand .eav{color:var(--gold1);font-weight:300;letter-spacing:.04em}
+  .brand .home2{font-size:.62em}
+  .brand-sub{font-size:13px;color:var(--muted2);margin-top:0;letter-spacing:.01em}
+
+  .appname-top{text-align:center;margin-top:2px}
+  .appname-top h2{display:inline-block;margin:0;font-size:38px;font-weight:900;letter-spacing:-0.01em;line-height:1}
+  .appname-top .pre{color:var(--muted2);font-weight:300}
+  .appname-top .post{color:var(--ink);font-weight:900}
+  .appname-top .home2{font-size:.5em}
+  .pro-tag{font-size:.4em;font-weight:900;letter-spacing:.12em;color:#1a1407;
+    background:linear-gradient(135deg,var(--gold1),var(--gold2));
+    padding:3px 9px;border-radius:6px;vertical-align:middle;margin-left:8px;font-style:normal}
+  @media (max-width:1100px){ .appname-top h2{font-size:32px} }
+
+  .hint{font-size:13px;color:var(--muted);margin:8px 0 4px;text-align:center}
+
+  /* controles */
+  .controls{display:flex;align-items:center;justify-content:center;gap:14px;margin:6px 0 10px}
+  .play{border:1px solid rgba(251,247,236,.45);background:rgba(251,247,236,.16);color:var(--ink);border-radius:50%;
+    width:60px;height:60px;flex:0 0 60px;cursor:pointer;display:grid;place-items:center;
+    transition:background .15s,transform .05s,box-shadow .15s;padding:0;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+  .play:hover{background:rgba(251,247,236,.28)}
+  .play:active{transform:scale(.94)}
+  .play svg{width:26px;height:26px;fill:var(--ink);display:block}
+  .play:disabled{opacity:.5;cursor:default}
+  .gen{display:flex;align-items:center;gap:9px}
+  .dice-btn{border:1px solid rgba(251,247,236,.40);background:rgba(251,247,236,.12);color:var(--ink);border-radius:50%;
+    width:46px;height:46px;flex:0 0 46px;cursor:pointer;display:grid;place-items:center;padding:0;transition:background .15s,transform .05s}
+  .dice-btn:hover{background:rgba(251,247,236,.24)}
+  .dice-btn:active{transform:rotate(-18deg) scale(.94)}
+  .dice-btn svg{width:24px;height:24px;display:block}
+  .dice-label{font-size:12px;color:var(--muted);white-space:nowrap;max-width:74px;line-height:1.1}
+
+  /* rejilla de ejercicios */
+  .grid{display:flex;flex-direction:column;gap:12px;margin:4px auto 0;width:100%;max-width:960px}
+  .ex{position:relative;overflow:hidden;width:100%;border-radius:16px;padding:8px 16px 8px;
+    background:
+      radial-gradient(120% 140% at 0% 0%, rgba(212,175,55,.16), transparent 55%),
+      linear-gradient(180deg,#2a200d,#1b1408);
+    border:1px solid #4a3914;
+    transition:border-color .18s, box-shadow .2s, background .25s}
+  .ex::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--gold2);opacity:.5;transition:opacity .2s}
+  .ex.active{border-color:var(--gold1);box-shadow:0 0 26px rgba(212,175,55,.2), 0 14px 40px rgba(0,0,0,.4)}
+  .ex.active::before{opacity:1;background:var(--gold-soft)}
+  .ex-head{display:flex;align-items:center;gap:11px;margin-bottom:4px}
+  .ex-title{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.02em}
+  .ex-key{font-size:12px;color:var(--muted2);margin-left:auto}
+  .scoreBox{background:var(--paper);border-radius:10px;padding:2px 8px 10px;overflow:hidden;position:relative;width:100%}
+  .scoreBox svg{display:block;width:100%;height:auto}
+  .ex-status{font-size:12px;color:var(--muted);min-height:1em}
+  .vumsg{display:none;font-size:11px;font-weight:600;white-space:nowrap}
+  .vumsg.show{display:inline}
+  .vumsg.ok{color:var(--muted2)}
+  .vumsg.low{color:var(--amber)}
+  .vumsg.none{color:var(--red)}
+  .ex-play{border:1px solid rgba(251,247,236,.45);background:rgba(251,247,236,.16);color:var(--ink);border-radius:50%;
+    width:38px;height:38px;flex:0 0 38px;cursor:pointer;display:grid;place-items:center;padding:0;
+    transition:background .15s,transform .05s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  .ex-play:hover{background:rgba(251,247,236,.28)}
+  .ex-play:active{transform:scale(.94)}
+  .ex-play svg{width:17px;height:17px;fill:var(--ink);display:block}
+  .ex-play:disabled{opacity:.45;cursor:default}
+
+  /* intro */
+  .intro{max-width:960px;margin:6px auto 0}
+  .intro p{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0;text-align:center}
+  .intro b{color:var(--ink);font-weight:800}
+  /* botón generar (arriba, único que genera) */
+  .topgen{display:flex;justify-content:center;align-items:center;gap:12px;margin:12px 0 0}
+  .gen-btn{display:inline-flex;align-items:center;gap:9px;border:1px solid rgba(212,175,55,.5);
+    background:linear-gradient(135deg,rgba(212,175,55,.18),rgba(184,134,11,.08));color:var(--ink);border-radius:12px;padding:10px 20px;font-size:14px;
+    font-weight:800;cursor:pointer;transition:background .15s,transform .05s,box-shadow .15s;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+  .gen-btn:hover{background:linear-gradient(135deg,rgba(212,175,55,.30),rgba(184,134,11,.16));box-shadow:0 4px 18px rgba(212,175,55,.22)}
+  .gen-btn:active{transform:scale(.97)}
+  .gen-btn svg{width:22px;height:22px;color:var(--gold-soft)}
+  /* botón PRO — dorado, conmutador */
+  .pro-btn{border:1px solid rgba(212,175,55,.55);border-radius:12px;padding:10px 20px;font-size:14px;font-weight:900;
+    letter-spacing:.08em;cursor:pointer;transition:all .15s;
+    color:var(--gold1);background:linear-gradient(135deg, rgba(212,175,55,0.16), rgba(184,134,11,0.08));
+    box-shadow:inset 0 0 0 1px rgba(212,175,55,0.3)}
+  .pro-btn:hover{color:#f0d57a;background:linear-gradient(135deg, rgba(212,175,55,0.28), rgba(184,134,11,0.16))}
+  .pro-btn.active{color:#1a1407;background:linear-gradient(135deg,var(--gold1),var(--gold2));box-shadow:0 4px 16px rgba(212,175,55,.35)}
+  .pro-note{text-align:center;font-size:12.5px;color:var(--gold1);margin:8px 0 0;min-height:1.2em;font-weight:600}
+
+  /* panel de intervalos seleccionables — cuadrados */
+  .ipanel-label{max-width:960px;margin:10px auto 5px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);text-align:left}
+  .ipanel{display:flex;align-items:flex-start;gap:14px;width:100%;max-width:960px;margin:0 auto}
+  .ivals{display:flex;flex-wrap:wrap;gap:9px;flex:1}
+  .ival{display:grid;place-items:center;width:54px;height:54px;flex:0 0 54px;border:1px solid var(--ic);
+    background:transparent;color:var(--ink);border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;
+    transition:background .12s,color .12s,transform .05s;user-select:none;line-height:1;padding:0}
+  .ival:hover{transform:translateY(-1px)}
+  /* seleccionado: relleno del color con transparencia (texto claro legible, sin sombra) */
+  .ival.on{
+    color:var(--ink);
+    border-color:var(--ic);
+    background:color-mix(in srgb, var(--ic) 38%, transparent);
+  }
+  .ival.locked{cursor:default}
+  .ipanel-btns{display:flex;align-items:flex-start;gap:10px;flex:0 0 auto}
+  .ip-item{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .ip-btn{border:1px solid rgba(251,247,236,.40);background:rgba(251,247,236,.12);color:var(--ink);border-radius:12px;
+    height:54px;min-width:54px;padding:0 14px;cursor:pointer;display:grid;place-items:center;
+    font-size:14px;font-weight:700;transition:background .15s,transform .05s}
+  .ip-btn:hover{background:rgba(251,247,236,.24)}
+  .ip-btn:active{transform:scale(.95)}
+  .ip-btn svg{width:24px;height:24px;display:block}
+  .ip-btn.ip-text{min-width:auto}
+  .ip-cap{font-size:10px;line-height:1.15;color:var(--muted2);text-align:center;max-width:74px;letter-spacing:.01em}
+
+  .result{text-align:center;font-size:15px;font-weight:700;margin-top:14px;min-height:1.4em}
+  .debug{text-align:center;font-size:11px;color:var(--muted2);font-family:monospace;margin-top:6px;min-height:1.2em}
+  .signal-warn{text-align:center;font-size:12px;color:var(--muted);margin-top:6px;min-height:1.2em;font-weight:600;transition:color .15s}
+  .signal-warn.ok{color:var(--muted2);font-weight:500}
+  .signal-warn.low{color:var(--amber);font-size:13px}
+  .signal-warn.none{color:var(--red);font-size:13px}
+  .signal-warn .tip{display:block;font-size:11px;color:var(--muted2);font-weight:400;margin-top:2px}
+</style>
+</head>
+<body>
+<div id="resultOverlay"><div class="result-inner"><div class="result-score" id="resultScore"></div><div class="result-msg" id="resultMsg"></div></div></div>
+<div id="welcomeModal">
+  <div class="wm-card">
+    <h3 class="wm-title">Antes de empezar</h3>
+    <p class="wm-sub">Elige los intervalos que pueden aparecer en los ejercicios.</p>
+    <div class="ivals" id="ivalsModal"></div>
+    <div class="wm-btns">
+      <button id="wmDice" class="ip-btn" title="Selección aleatoria"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/><circle cx="16" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="8" cy="16" r="1.6" fill="currentColor"/><circle cx="16" cy="16" r="1.6" fill="currentColor"/></svg> Al azar</button>
+      <button id="wmAll" class="ip-btn ip-text">Todos</button>
+      <button id="wmAccept" class="wm-accept">ACEPTAR</button>
+    </div>
+  </div>
+</div>
+<div class="topinfo">
+  <span class="topinfo-by">by Iago González Alonso</span>
+  <span class="topinfo-sep">·</span>
+  <span class="topinfo-opt">Optimizado para ordenador y tablet</span>
+</div>
+
+<div class="header-bar">
+  <header>
+    <div class="brand">
+      <h1><a href="https://iagonaron.github.io/lmpro/" class="brand-link"><span class="lm">LM</span><span class="eav">PRO</span></a></h1>
+      <div class="brand-sub">Suite avanzada para Grado Profesional</div>
+    </div>
+  </header>
+  <div class="appname-top">
+    <h2><span class="post">INTER</span><span class="pre">VALIA</span> <span class="home2">at home</span> <span class="pro-tag">PRO</span></h2>
+  </div>
+</div>
+
+<div class="intro">
+  <p><b>Intervalia Pro</b> es entrenamiento interválico puro: notas aleatorias sin contexto tonal. Escucha la primera nota y canta las diez seguidas; cada color indica el intervalo entre notas.</p>
+</div>
+
+<div class="topgen">
+  <button id="genBtn" class="gen-btn"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/><circle cx="16" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="8" cy="16" r="1.6" fill="currentColor"/><circle cx="16" cy="16" r="1.6" fill="currentColor"/></svg> Generar ejercicios</button>
+</div>
+
+<div class="grid" id="grid">
+  <div class="ex" id="ex0"><div class="ex-head"><button class="ex-play" data-ex="0" title="Cantar este ejercicio"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button><span class="ex-title">Ejercicio 1</span><span class="ex-status" id="status0"></span><span class="vumsg" id="vumsg0"></span><span class="ex-key" id="key0"></span></div><div class="scoreBox" id="score0"></div></div>
+  <div class="ex" id="ex1"><div class="ex-head"><button class="ex-play" data-ex="1" title="Cantar este ejercicio"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button><span class="ex-title">Ejercicio 2</span><span class="ex-status" id="status1"></span><span class="vumsg" id="vumsg1"></span><span class="ex-key" id="key1"></span></div><div class="scoreBox" id="score1"></div></div>
+</div>
+
+<div class="ipanel-label">Intervalos que pueden aparecer</div>
+<div class="ipanel" id="ipanel">
+  <div class="ivals" id="ivals"></div>
+  <div class="ipanel-btns">
+    <div class="ip-item">
+      <button id="diceBtn" class="ip-btn" title="Selección aleatoria de intervalos"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/><circle cx="16" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="8" cy="16" r="1.6" fill="currentColor"/><circle cx="16" cy="16" r="1.6" fill="currentColor"/></svg></button>
+      <span class="ip-cap">Intervalos al azar</span>
+    </div>
+    <div class="ip-item">
+      <button id="allBtn" class="ip-btn ip-text" title="Seleccionar todos los intervalos">Todos</button>
+      <span class="ip-cap">Seleccionar todos</span>
+    </div>
+  </div>
+</div>
+
+<div class="result" id="result"></div>
+<div class="signal-warn" id="signalWarn"></div>
+<div class="debug" id="debug"></div>
+
+<script>
+"use strict";
+"use strict";
+/* =========================================================
+   INTERVALIA — motor de generación musical
+   - 10 tonalidades (5 mayores + 5 menores, 0/1/2 alteraciones)
+   - 5 notas por ejercicio: 1ª dada + 4
+   - última nota = nota del acorde de tónica (1,3,5)
+   - rango La3 (MIDI 57) .. Mi5 (MIDI 76) en clave de Sol
+   - notas con nombre/alteración explícita (para intervalo por nombre)
+   ========================================================= */
+
+// --- nombres de nota y semitonos de la clase (Do=0) ---
+const LETTERS = ["C","D","E","F","G","A","B"];
+const LETTER_PC = {C:0,D:2,E:4,F:5,G:7,A:9,B:11}; // pitch class natural
+
+// nombre español para mostrar
+const SP = {C:"Do",D:"Re",E:"Mi",F:"Fa",G:"Sol",A:"La",B:"Si"};
+
+// --- definición de tonalidades ---
+// cada una: tónica (letra), modo, y el set de notas de la escala con su alteración.
+// Representamos cada grado como {letter, acc} donde acc ∈ {-1,0,1} (b, natural, #).
+// Escala mayor: T-T-s-T-T-T-s ; menor natural: T-s-T-T-s-T-T
+const MAJOR_STEPS = [2,2,1,2,2,2,1];
+const MINOR_STEPS = [2,1,2,2,1,2,2];
+
+// construye la escala diatónica con ortografía correcta (una letra por grado)
+function buildScale(tonicLetter, mode){
+  const steps = mode==="major"?MAJOR_STEPS:MINOR_STEPS;
+  const startIdx = LETTERS.indexOf(tonicLetter);
+  const scale = [];
+  let pc = LETTER_PC[tonicLetter]; // pitch class de la tónica natural
+  // la tónica puede llevar alteración propia (p.ej. Sib mayor -> Bb). la fijamos fuera.
+  for(let i=0;i<7;i++){
+    const letter = LETTERS[(startIdx+i)%7];
+    const naturalPc = LETTER_PC[letter];
+    // pc objetivo de este grado
+    let targetPc = pc % 12;
+    // alteración = diferencia entre pc objetivo y pc natural de la letra, en [-2,2]
+    let acc = ((targetPc - naturalPc + 18) % 12);
+    if(acc>6) acc -= 12; // a rango [-6,6], normalmente [-2,2]
+    scale.push({letter, acc, pc:targetPc});
+    pc += steps[i];
+  }
+  return scale; // 7 grados, índice 0 = tónica
+}
+
+// las 10 tonalidades. tonicPc fija la altura real de la tónica (con su alteración).
+const KEYS = [
+  // mayores
+  {name:"Do M",  tonic:"C", mode:"major", tonicAcc:0},
+  {name:"Sol M", tonic:"G", mode:"major", tonicAcc:0},
+  {name:"Re M",  tonic:"D", mode:"major", tonicAcc:0},
+  {name:"Fa M",  tonic:"F", mode:"major", tonicAcc:0},
+  {name:"Sib M", tonic:"B", mode:"major", tonicAcc:-1},
+  // menores
+  {name:"la m",  tonic:"A", mode:"minor", tonicAcc:0},
+  {name:"mi m",  tonic:"E", mode:"minor", tonicAcc:0},
+  {name:"si m",  tonic:"B", mode:"minor", tonicAcc:0},
+  {name:"re m",  tonic:"D", mode:"minor", tonicAcc:0},
+  {name:"sol m", tonic:"G", mode:"minor", tonicAcc:0},
+];
+
+// diferencia con signo entre pc objetivo y pc natural, en [-6,6] (normalmente [-2,2])
+function signedAcc(pc, naturalPc){
+  let d = (pc - naturalPc) % 12;
+  if(d>6) d -= 12;
+  if(d<-6) d += 12;
+  return d;
+}
+
+// construye la escala correcta partiendo de la tónica con su alteración
+function scaleForKey(key){
+  const steps = key.mode==="major"?MAJOR_STEPS:MINOR_STEPS;
+  const startIdx = LETTERS.indexOf(key.tonic);
+  const scale = [];
+  let pc = (LETTER_PC[key.tonic] + key.tonicAcc + 12) % 12;
+  for(let i=0;i<7;i++){
+    const letter = LETTERS[(startIdx+i)%7];
+    const acc = signedAcc(pc, LETTER_PC[letter]);
+    scale.push({letter, acc, pc});
+    pc = (pc + steps[i]) % 12;
+  }
+  return scale;
+}
+
+// MIDI de una nota dada {letter, acc, octave}
+function noteMidi(letter, acc, octave){
+  return (octave+1)*12 + LETTER_PC[letter] + acc;
+}
+
+// todas las posiciones (con octava) de un grado de la escala dentro del rango
+const RANGE_LOW = 57;  // La3
+const RANGE_HIGH = 76; // Mi5
+function placementsInRange(grade){
+  const res = [];
+  for(let oct=2; oct<=6; oct++){
+    const m = noteMidi(grade.letter, grade.acc, oct);
+    if(m>=RANGE_LOW && m<=RANGE_HIGH) res.push({...grade, octave:oct, midi:m});
+  }
+  return res;
+}
+
+// --- intervalo por NOMBRE entre dos notas (con ortografía) ---
+// devuelve {semitones, name} donde name ∈ {2m,2M,3m,3M,4J,TT,5J,6m,6M,7m,7M,8J,Unis}
+function intervalName(a, b){
+  const semis = Math.abs(b.midi - a.midi);
+  const s = semis % 12;
+  const oct = semis>=12;
+  // número de intervalo por distancia de letras
+  const NAME_BY_SEMI = {0:"Unis",1:"2m",2:"2M",3:"3m",4:"3M",5:"4J",6:"TT",7:"5J",8:"6m",9:"6M",10:"7m",11:"7M"};
+  let name = NAME_BY_SEMI[s];
+  if(semis===12) name="8J";
+  return {semitones:semis, name};
+}
+
+const rnd = n => Math.floor(Math.random()*n);
+const pick = arr => arr[rnd(arr.length)];
+function weightedPick(items){ // items: [{p, w}]
+  const total = items.reduce((s,x)=>s+x.w,0);
+  let r = Math.random()*total;
+  for(const it of items){ r-=it.w; if(r<=0) return it.p; }
+  return items[items.length-1].p;
+}
+
+// genera UN ejercicio: 5 notas
+// opts: { numNotes (def 5), allowed (Set de nombres de intervalo permitidos) }
+// allowed=null -> todos permitidos. 2m y 2M conviene tenerlos siempre para garantizar salida.
+function genExercise(key, opts){
+  opts = opts || {};
+  const numNotes = opts.numNotes || 5;
+  const allowed = opts.allowed || null; // Set o null
+  const scale = scaleForKey(key);
+  const chordDegrees = [0,2,4];
+
+  const allowedOk = (a,b)=>{
+    if(!allowed) return true;
+    return allowed.has(intervalName(a,b).name);
+  };
+
+  const tonicPlacements = placementsInRange(scale[0]);
+  if(tonicPlacements.length===0) return null;
+  const first = tonicPlacements.sort((a,b)=>Math.abs(a.midi-66)-Math.abs(b.midi-66))[0];
+  const notes = [first];
+
+  // notas intermedias: hasta numNotes-1, filtrando por intervalos permitidos
+  for(let i=1;i<=numNotes-2;i++){
+    const prev = notes[i-1];
+    let cands = [];
+    for(const g of scale){
+      for(const p of placementsInRange(g)){
+        const leap = Math.abs(p.midi - prev.midi);
+        if(leap===0 || leap>12) continue;
+        if(!allowedOk(prev,p)) continue;        // <-- filtro de intervalo
+        let w;
+        if(leap<=2) w=6; else if(leap<=4) w=5; else if(leap<=7) w=3; else if(leap<=9) w=2; else w=1;
+        cands.push({p, w});
+      }
+    }
+    if(cands.length===0){
+      // sin candidatos con el filtro: relajar a cualquier intervalo (no debería pasar si 2m/2M activos)
+      for(const g of scale) for(const p of placementsInRange(g)){
+        const leap=Math.abs(p.midi-prev.midi); if(leap===0||leap>12)continue; cands.push({p,w:1});
+      }
+    }
+    notes.push(weightedPick(cands));
+  }
+
+  // última nota: del acorde de tónica, en rango, intervalo permitido desde la anterior
+  const prev = notes[notes.length-1];
+  let finals = [];
+  for(const cd of chordDegrees){
+    for(const p of placementsInRange(scale[cd])){
+      const leap = Math.abs(p.midi - prev.midi);
+      if(leap===0 || leap>12) continue;
+      if(!allowedOk(prev,p)) continue;
+      finals.push(p);
+    }
+  }
+  if(finals.length===0){
+    // relajar filtro para el cierre (prioriza acabar en acorde)
+    for(const cd of chordDegrees) for(const p of placementsInRange(scale[cd])){
+      const leap=Math.abs(p.midi-prev.midi); if(leap>0&&leap<=12) finals.push(p);
+    }
+  }
+  if(finals.length===0){ for(const cd of chordDegrees) finals.push(...placementsInRange(scale[cd])); }
+  notes.push(pick(finals));
+
+  const intervals = [];
+  for(let i=1;i<notes.length;i++) intervals.push(intervalName(notes[i-1], notes[i]));
+  return {key:key.name, notes, intervals};
+}
+
+// ---- MODO PRO: entrenamiento interválico puro, sin tonalidad ----
+// semitonos por nombre de intervalo
+const INTERVAL_SEMI = {"2m":1,"2M":2,"3m":3,"3M":4,"4J":5,"TT":6,"5J":7,"6m":8,"6M":9,"7m":10,"7M":11,"8J":12};
+// número diatónico (saltos de letra) por nombre, para ortografía correcta
+const INTERVAL_STEPS = {"2m":1,"2M":1,"3m":2,"3M":2,"4J":3,"TT":3,"5J":4,"6m":5,"6M":5,"7m":6,"7M":6,"8J":7};
+
+// construye la nota a 'iv' (semitonos + pasos diatónicos) de 'from', dir(+1/-1).
+// La grafía respeta el NOMBRE del intervalo: una 6m se escribe como 6ª (5 letras),
+// nunca como 5ª aumentada aunque suene igual. Devuelve null si requeriría doble alteración.
+function noteByInterval(from, ivName, dir){
+  const semis = INTERVAL_SEMI[ivName];
+  const steps = INTERVAL_STEPS[ivName];
+  const targetMidi = from.midi + dir*semis;
+  if(targetMidi < RANGE_LOW || targetMidi > RANGE_HIGH) return null;
+  // letra destino: avanzar 'steps' letras en la dirección
+  const fromIdx = LETTERS.indexOf(from.letter);
+  const li = ((fromIdx + dir*steps) % 7 + 7) % 7;
+  const letter = LETTERS[li];
+  const natural = LETTER_PC[letter];
+  // octava + alteración que cuadren con targetMidi para esa letra
+  for(let oct=2; oct<=6; oct++){
+    const acc = targetMidi - ((oct+1)*12 + natural);
+    if(acc>=-1 && acc<=1){   // solo natural, sostenido o bemol simples (sin dobles)
+      const m = (oct+1)*12 + natural + acc;
+      if(m===targetMidi){
+        return {letter, acc, octave:oct, midi:m, pc:((natural+acc)%12+12)%12};
+      }
+    }
+  }
+  return null; // exigiría doble alteración: se descarta este intervalo/dirección
+}
+
+// elige la grafía más simple para un MIDI dado (mínima alteración).
+// prioriza naturales, luego sostenidos/bemoles simples; evita dobles.
+function spellMidi(midi){
+  const pc = ((midi%12)+12)%12;
+  // candidatos por letra con su alteración para ese pc
+  let best=null;
+  for(const L of LETTERS){
+    const natural = LETTER_PC[L];
+    let acc = pc - natural;
+    if(acc>6) acc-=12; if(acc<-6) acc+=12;
+    if(acc<-2 || acc>2) continue;
+    // octava que cuadre con el midi
+    for(let oct=2; oct<=6; oct++){
+      const m=(oct+1)*12 + natural + acc;
+      if(m===midi){
+        const score = Math.abs(acc); // preferir menos alteración
+        if(best===null || score<best.score) best={letter:L,acc,octave:oct,midi,pc,score};
+      }
+    }
+  }
+  if(!best) return null;
+  delete best.score;
+  return best;
+}
+
+function genExercisePro(allowedArr, numNotes){
+  numNotes = numNotes || 10;
+  const allowed = allowedArr && allowedArr.length ? allowedArr.slice() : Object.keys(INTERVAL_SEMI);
+  // 1ª nota: aleatoria en rango, octava central preferida
+  let startMidi = 60 + Math.floor(Math.random()*8) - 4; // alrededor de Do4
+  // partimos de una nota natural aleatoria
+  const baseLetters = ["C","D","E","F","G","A","B"];
+  for(let attempt=0; attempt<60; attempt++){
+    const L = baseLetters[Math.floor(Math.random()*7)];
+    const oct = 3 + Math.floor(Math.random()*2); // 3 o 4
+    const acc = 0; // 1ª nota natural: minimiza la necesidad de dobles alteraciones
+    const m = (oct+1)*12 + LETTER_PC[L] + acc;
+    if(m>=RANGE_LOW+2 && m<=RANGE_HIGH-2){
+      const first = {letter:L, acc, octave:oct, midi:m, pc:((LETTER_PC[L]+acc)%12+12)%12};
+      const notes = [first];
+      let ok = true;
+      for(let i=1;i<numNotes;i++){
+        const prev = notes[i-1];
+        // intentar varios intervalos/direcciones hasta que quepa en rango
+        const tries = [];
+        for(const iv of allowed){ tries.push([iv,1]); tries.push([iv,-1]); }
+        // barajar
+        for(let k=tries.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[tries[k],tries[j]]=[tries[j],tries[k]];}
+        let next=null;
+        for(const [iv,dir] of tries){ next = noteByInterval(prev, iv, dir); if(next) break; }
+        if(!next){ ok=false; break; }
+        notes.push(next);
+      }
+      if(ok && notes.length===numNotes){
+        const intervals=[];
+        for(let i=1;i<notes.length;i++) intervals.push(intervalName(notes[i-1],notes[i]));
+        return {key:"Pro · interválico", notes, intervals};
+      }
+    }
+  }
+  return null;
+}
+
+const VF = Vex.Flow;
+
+// paleta de intervalos -> nombre css var y color
+const INTERVAL_COLOR = {
+  "2m":"#a62c17","2M":"#ed732e",
+  "3m":"#2f6b1e","3M":"#9ed649",   // verde: oscuro más saturado, claro más vivo
+  "4J":"#2355ce","TT":"#f3ec4e","5J":"#5ac4f7","6m":"#8c33b6",
+  "6M":"#d796f8",
+  "7m":"#5a2d05","7M":"#c98a1e",   // marrón: oscuro más profundo, claro más dorado
+  "8J":"#000000","Unis":"#5c5c5c"
+};
+const INTERVAL_LABEL = {
+  "2m":"2m","2M":"2M","3m":"3m","3M":"3M","4J":"4J","TT":"4A/5D",
+  "5J":"5J","6m":"6m","6M":"6M","7m":"7m","7M":"7M","8J":"8J"
+};
+// nombre largo para el panel
+const INTERVAL_FULL = {
+  "2m":"2ª menor","2M":"2ª mayor","3m":"3ª menor","3M":"3ª mayor",
+  "4J":"4ª justa","TT":"Tritono","5J":"5ª justa","6m":"6ª menor",
+  "6M":"6ª mayor","7m":"7ª menor","7M":"7ª mayor","8J":"8ª justa"
+};
+const INTERVAL_ORDER = ["2m","2M","3m","3M","4J","TT","5J","6m","6M","7m","7M","8J"];
+const LOCKED_TONAL = new Set(["2m","2M"]);
+let PRO_MODE = true;   // esta página SIEMPRE es Pro (interválico puro)
+function isLocked(name){ return !PRO_MODE && LOCKED_TONAL.has(name); }
+// estado de selección (Set de nombres activos)
+let SELECTED = new Set(["2m","2M","3m","3M","4J","TT","5J","6m","6M","7m","7M","8J"]);
+// intervalos con color oscuro -> texto blanco ya va bien; el negro (8J) necesita marca
+const DARK_INTERVALS = new Set(["3m","6m","7m","8J","2m"]);
+
+// nombre VexFlow de una nota {letter, acc, octave}
+const ACC_VF = {"-2":"bb","-1":"b","0":"","1":"#","2":"##"};
+function vfKey(n){
+  return n.letter.toLowerCase() + ACC_VF[String(n.acc)] + "/" + n.octave;
+}
+
+let CURRENT = [null,null]; // los 2 ejercicios
+let noteStaveX = [[],[]];  // posiciones por ejercicio
+const NUM_EX = 2;
+const NUM_NOTES = 10;
+
+// ---------- RENDER de un ejercicio con VexFlow ----------
+function renderExercise(idx){
+  const box = document.getElementById("score"+idx);
+  // limpiar render previo
+  [...box.querySelectorAll("svg")].forEach(s=>s.remove());
+
+  const ex = CURRENT[idx];
+  document.getElementById("key"+idx).textContent = ex.key;
+
+  // ancho interno fijo y amplio (el CSS lo escala al 100% de la tarjeta).
+  // con 10 notas necesita bastante recorrido horizontal.
+  const width = 920;
+  const height = 138;
+  const renderer = new VF.Renderer(box, VF.Renderer.Backends.SVG);
+  renderer.resize(width, height);
+  const ctx = renderer.getContext();
+  ctx.setFont("Arial", 10);
+
+  const stave = new VF.Stave(10, 6, width-20);
+  stave.addClef("treble");
+  stave.setContext(ctx).draw();
+
+  // notas redondas (solo entonación, sin ritmo)
+  const notes = ex.notes.map(n=>{
+    const sn = new VF.StaveNote({clef:"treble", keys:[vfKey(n)], duration:"w"});
+    if(n.acc!==0) sn.addModifier(new VF.Accidental(ACC_VF[String(n.acc)]), 0);
+    return sn;
+  });
+
+  const voice = new VF.Voice({num_beats:NUM_NOTES, beat_value:4}).setStrict(false);
+  voice.addTickables(notes);
+  // formatear a casi todo el ancho del pentagrama para que la última nota
+  // quede apurada al extremo derecho
+  new VF.Formatter().joinVoices([voice]).format([voice], width-55);
+  voice.draw(ctx, stave);
+
+  // capturar posiciones reales de las cabezas leyendo el SVG renderizado.
+  // VexFlow marca cada cabeza como <g class="vf-notehead">; usamos su bbox.
+  const svg = box.querySelector("svg");
+  svg.style.position = "relative";
+  svg.style.zIndex = "1";
+  // viewBox para que width:100%/height:auto escale proporcionalmente
+  svg.setAttribute("viewBox", "0 0 "+width+" "+height);
+  svg.removeAttribute("width"); svg.removeAttribute("height");
+  // Posiciones de cada cabeza:
+  //  - Y: la da VexFlow con getYs() (posición real en el pentagrama, sin depender
+  //       de glifos de alteración que descuadran el bounding box).
+  //  - X: centro del bounding box de la cabeza.
+  const positions = [];
+  const headGroups = svg.querySelectorAll("g.vf-notehead");
+  notes.forEach((sn, k)=>{
+    let x;
+    if(headGroups[k]){ const r=headGroups[k].getBBox(); x = r.x + r.width/2; }
+    else { x = sn.getAbsoluteX()+6; }
+    const ys = sn.getYs();
+    const y = ys[0];
+    positions.push({x, y});
+  });
+  noteStaveX[idx] = positions;
+
+  drawIntervalLines(idx);
+}
+
+// ---------- LÍNEAS DE COLOR entre cabezas ----------
+function drawIntervalLines(idx){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  const ex = CURRENT[idx];
+  const pos = noteStaveX[idx];
+  const NS = "http://www.w3.org/2000/svg";
+  // borrar líneas previas
+  [...svg.querySelectorAll(".ivline")].forEach(l=>l.remove());
+  const MARGIN = 18;      // hueco entre la cabeza y el inicio/fin de la línea
+  const MIN_TILT = 5;     // inclinación mínima en px (ninguna línea totalmente horizontal)
+  const notes = ex.notes;
+  for(let i=1;i<pos.length;i++){
+    const iv = ex.intervals[i-1];
+    const color = INTERVAL_COLOR[iv.name] || "#999";
+    const a = {x:pos[i-1].x, y:pos[i-1].y};
+    const b = {x:pos[i].x,   y:pos[i].y};
+    // si los Y quedan casi iguales pero las notas no son del mismo grave/agudo,
+    // forzar inclinación según la dirección real del intervalo (b respecto a a)
+    if(Math.abs(b.y - a.y) < MIN_TILT){
+      const dir = notes[i].midi > notes[i-1].midi ? -1 : 1; // más agudo => Y menor (sube)
+      const half = MIN_TILT/2;
+      a.y += dir*half;     // bajar/subir un poco el origen
+      b.y -= dir*half;     // y al revés el destino
+    }
+    const dx = b.x-a.x, dy = b.y-a.y;
+    const len = Math.hypot(dx,dy) || 1;
+    const ux = dx/len, uy = dy/len;
+    const x1 = a.x + ux*MARGIN, y1 = a.y + uy*MARGIN;
+    const x2 = b.x - ux*MARGIN, y2 = b.y - uy*MARGIN;
+    const line = document.createElementNS(NS,"line");
+    line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+    line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+    line.setAttribute("stroke", color);
+    line.setAttribute("stroke-width", "4");
+    line.setAttribute("stroke-linecap","round");
+    line.setAttribute("class","ivline");
+    svg.appendChild(line);
+  }
+}
+
+// colorear una cabeza de nota (estado de acierto/fallo)
+function setHeadColor(idx, noteIdx, color){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  const heads = svg.querySelectorAll("g.vf-notehead");
+  if(heads[noteIdx]){
+    heads[noteIdx].querySelectorAll("path").forEach(p=>{
+      p.setAttribute("fill", color); p.setAttribute("stroke", color);
+    });
+  }
+}
+
+// escribe un aviso de dirección encima/debajo de la nota.
+// dir: "baja" -> debajo; "alta" -> encima.
+// mode: "estas" (1er fallo, naranja) | "quedaste" (2º fallo, rojo)
+function setPitchHint(idx, noteIdx, dir, mode){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  clearPitchHintFor(idx, noteIdx);   // sustituir solo el hint de ESTA nota
+  const pos = noteStaveX[idx];
+  if(!pos || !pos[noteIdx]) return;
+  const NS = "http://www.w3.org/2000/svg";
+  const t = document.createElementNS(NS,"text");
+  const p = pos[noteIdx];
+  const yOff = dir==="baja" ? 28 : -22;   // debajo si va bajo, encima si va alto
+  t.setAttribute("x", p.x);
+  t.setAttribute("y", p.y + yOff);
+  t.setAttribute("text-anchor","middle");
+  t.setAttribute("font-size","12");
+  t.setAttribute("font-weight","800");
+  t.setAttribute("class","pitchhint");
+  t.setAttribute("data-note", noteIdx);
+  if(mode==="quedaste"){
+    t.setAttribute("fill", "#dc2626"); // rojo
+    t.textContent = dir==="baja" ? "quedaste bajo" : "quedaste alto";
+  } else {
+    t.setAttribute("fill", "#ea7317"); // naranja
+    t.textContent = dir==="baja" ? "estás bajo" : "estás alto";
+  }
+  svg.appendChild(t);
+}
+// borra el hint de UNA nota concreta
+function clearPitchHintFor(idx, noteIdx){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  [...svg.querySelectorAll('.pitchhint[data-note="'+noteIdx+'"]')].forEach(e=>e.remove());
+}
+// borra TODOS los hints del ejercicio (solo al empezar una pasada nueva)
+function clearPitchHint(idx){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  [...svg.querySelectorAll(".pitchhint")].forEach(e=>e.remove());
+}
+
+// onda expansiva verde sutil sobre la cabeza acertada
+function pulseCorrect(idx, noteIdx){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  const pos = noteStaveX[idx]; if(!pos || !pos[noteIdx]) return;
+  const NS="http://www.w3.org/2000/svg";
+  const c=document.createElementNS(NS,"circle");
+  c.setAttribute("cx",pos[noteIdx].x); c.setAttribute("cy",pos[noteIdx].y);
+  c.setAttribute("r","6"); c.setAttribute("fill","none");
+  c.setAttribute("stroke","#16a34a"); c.setAttribute("stroke-width","2.5");
+  c.setAttribute("class","fxring"); svg.appendChild(c);
+  const a1=document.createElementNS(NS,"animate");
+  a1.setAttribute("attributeName","r"); a1.setAttribute("from","6"); a1.setAttribute("to","22");
+  a1.setAttribute("dur","0.5s"); a1.setAttribute("fill","freeze");
+  const a2=document.createElementNS(NS,"animate");
+  a2.setAttribute("attributeName","opacity"); a2.setAttribute("from","0.8"); a2.setAttribute("to","0");
+  a2.setAttribute("dur","0.5s"); a2.setAttribute("fill","freeze");
+  c.appendChild(a1); c.appendChild(a2);
+  if(a1.beginElement) a1.beginElement();
+  if(a2.beginElement) a2.beginElement();
+  setTimeout(()=>c.remove(),550);
+}
+
+// temblor de la cabeza fallada (rojo)
+function shakeNote(idx, noteIdx){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  const heads = svg.querySelectorAll("g.vf-notehead");
+  const g = heads[noteIdx]; if(!g) return;
+  g.style.transformBox="fill-box"; g.style.transformOrigin="center";
+  g.style.animation="noteShake .42s ease-in-out";
+  setTimeout(()=>{ g.style.animation=""; }, 460);
+}
+
+// flecha + "sonaba así" (verde) apuntando lateralmente a la nota correcta
+function showSoundedLike(idx, noteIdx){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  const pos = noteStaveX[idx]; if(!pos || !pos[noteIdx]) return;
+  const NS="http://www.w3.org/2000/svg";
+  const p=pos[noteIdx];
+  const g=document.createElementNS(NS,"g"); g.setAttribute("class","soundedlike");
+  const x=p.x, y=p.y;
+  const GREEN="#16a34a";
+  // flecha horizontal que entra desde la izquierda a la altura de la nota
+  const line=document.createElementNS(NS,"line");
+  line.setAttribute("x1",x-70); line.setAttribute("y1",y); line.setAttribute("x2",x-12); line.setAttribute("y2",y);
+  line.setAttribute("stroke",GREEN); line.setAttribute("stroke-width","2");
+  const head=document.createElementNS(NS,"path");
+  head.setAttribute("d",`M ${x-12} ${y} l -7 -4 l 0 8 z`);
+  head.setAttribute("fill",GREEN);
+  const t=document.createElementNS(NS,"text");
+  t.setAttribute("x",x-72); t.setAttribute("y",y-5); t.setAttribute("text-anchor","end");
+  t.setAttribute("font-size","12"); t.setAttribute("font-weight","800"); t.setAttribute("fill",GREEN);
+  t.textContent="sonaba así";
+  g.appendChild(line); g.appendChild(head); g.appendChild(t);
+  svg.appendChild(g);
+}
+function clearSoundedLike(idx){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  [...svg.querySelectorAll(".soundedlike")].forEach(e=>e.remove());
+}
+
+// guarda el color de relleno actual de cada cabeza (para restaurar tras un gris temporal)
+function snapshotHeadColors(idx){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return [];
+  const heads = svg.querySelectorAll("g.vf-notehead");
+  return [...heads].map(g=>{ const p=g.querySelector("path"); return p?p.getAttribute("fill"):"#000"; });
+}
+function restoreHeadColors(idx, saved){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  const heads = svg.querySelectorAll("g.vf-notehead");
+  heads.forEach((g,k)=>{
+    const color = saved[k] || "#000";
+    g.querySelectorAll("path").forEach(p=>{ p.setAttribute("fill",color); p.setAttribute("stroke",color); });
+  });
+  // restaurar también el color de las líneas (el gris las atenuó)
+  drawIntervalLines(idx);
+}
+
+// poner TODAS las cabezas y líneas en gris (mientras suena la referencia)
+function setExerciseGray(idx){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  svg.querySelectorAll("g.vf-notehead path").forEach(p=>{ p.setAttribute("fill","#c2c6d4"); p.setAttribute("stroke","#c2c6d4"); });
+  svg.querySelectorAll(".ivline").forEach(l=>l.setAttribute("stroke","#d2d5df"));
+}
+// restaurar: cabezas a negro y líneas a su color de intervalo
+function restoreExercise(idx){
+  const box = document.getElementById("score"+idx);
+  const svg = box.querySelector("svg");
+  if(!svg) return;
+  svg.querySelectorAll("g.vf-notehead path").forEach(p=>{ p.setAttribute("fill","#000"); p.setAttribute("stroke","#000"); });
+  drawIntervalLines(idx); // redibuja con los colores correctos
+}
+
+// color del CUADRITO del panel (la 8J usa gris para verse sobre fondo oscuro;
+// la LÍNEA del pentagrama sigue negra, fiel al libro)
+const SWATCH_COLOR = Object.assign({}, INTERVAL_COLOR, {"8J":"#9aa0b5"});
+
+// ---------- PANEL DE INTERVALOS ----------
+function renderIntervalPanel(){
+  ["ivals","ivalsModal"].forEach(containerId=>{
+    const el = document.getElementById(containerId);
+    if(!el) return;
+    el.innerHTML = "";
+    INTERVAL_ORDER.forEach(name=>{
+      const b = document.createElement("button");
+      b.className = "ival" + (SELECTED.has(name)?" on":"") + (isLocked(name)?" locked":"");
+      b.style.setProperty("--ic", SWATCH_COLOR[name]);
+      b.textContent = INTERVAL_LABEL[name];
+      b.title = INTERVAL_FULL[name];
+      b.onclick = ()=>{
+        if(isLocked(name)) return;
+        if(SELECTED.has(name)) SELECTED.delete(name); else SELECTED.add(name);
+        renderIntervalPanel();
+      };
+      el.appendChild(b);
+    });
+  });
+}
+
+function diceIntervals(){
+  if(PRO_MODE){
+    // Pro: 5 intervalos cualesquiera al azar (sin obligatorios)
+    SELECTED = new Set();
+    const all = INTERVAL_ORDER.slice();
+    for(let i=all.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [all[i],all[j]]=[all[j],all[i]]; }
+    all.slice(0,5).forEach(n=>SELECTED.add(n));
+  } else {
+    // tonal: 2m y 2M obligatorios + 3 aleatorios del resto
+    SELECTED = new Set(["2m","2M"]);
+    const rest = INTERVAL_ORDER.filter(n=>!isLocked(n));
+    for(let i=rest.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    rest.slice(0,3).forEach(n=>SELECTED.add(n));
+  }
+  renderIntervalPanel();
+}
+function selectAll(){
+  SELECTED = new Set(INTERVAL_ORDER);
+  renderIntervalPanel();
+}
+
+// ---------- GENERAR los 2 ejercicios ----------
+function generateAll(){
+  if(PRO_MODE){
+    // entrenamiento interválico puro: notas aleatorias, sin tonalidad
+    const allowedArr = [...SELECTED];
+    for(let i=0;i<NUM_EX;i++){
+      let ex=null, tries=0;
+      do{ ex = genExercisePro(allowedArr, NUM_NOTES); tries++; }while(!ex && tries<60);
+      CURRENT[i] = ex || genExercisePro(["2m","2M","3m","3M"], NUM_NOTES);
+    }
+  } else {
+    // modo tonal: tonalidad implícita, 1ª tónica, última del acorde
+    const allowed = new Set(SELECTED);
+    allowed.add("2m"); allowed.add("2M"); // garantía de tonalidad
+    const usedKeys = [];
+    for(let i=0;i<NUM_EX;i++){
+      let key, ex, tries=0;
+      do{
+        key = KEYS[Math.floor(Math.random()*KEYS.length)];
+        ex = genExercise(key, {numNotes:NUM_NOTES, allowed});
+        tries++;
+      }while((!ex || usedKeys.includes(key.name)) && tries<40);
+      usedKeys.push(key.name);
+      CURRENT[i] = ex;
+    }
+  }
+  for(let i=0;i<NUM_EX;i++){ renderExercise(i); document.getElementById("status"+i).textContent=""; document.getElementById("ex"+i).classList.remove("active"); }
+  document.getElementById("result").textContent="";
+  document.getElementById("debug").textContent="";
+}
+
+window.addEventListener("resize", ()=>{ for(let i=0;i<NUM_EX;i++) if(CURRENT[i]) renderExercise(i); });
+
+/* =========================================================
+   AUDIO: síntesis de piano + captura de voz + pitch
+   ========================================================= */
+const CFG = {
+  pianoDuration: 1800,
+  refDuration: 1100,
+  noteTimeout: 6000,
+  postPianoMute: 350,
+  startGrayPause: 60,
+  rmsMin: 0.024, micGain: 8.0,
+  centsPerfect: 60, centsNear: 90,
+  framesNeeded: 4, lowSignalFrames: 25, silenceFrames: 40,
+  frameInterval: 80, fftSize: 2048
+};
+
+let audioCtx=null, analyser=null, micStream=null, pitchBuffer=null;
+let micGainNode=null, rawAnalyser=null, rawBuffer=null, autoGain=null;
+
+async function initAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==="suspended") await audioCtx.resume();
+  if(!micStream){
+    micStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    const src = audioCtx.createMediaStreamSource(micStream);
+    autoGain = CFG.micGain;                 // ganancia inicial; se autoajusta con el uso
+    micGainNode = audioCtx.createGain(); micGainNode.gain.value = autoGain;
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = CFG.fftSize;
+    src.connect(micGainNode); micGainNode.connect(analyser);
+    pitchBuffer = new Float32Array(analyser.fftSize);
+    // analizador de la señal CRUDA (antes de ganancia), para calibrar la entrada real
+    rawAnalyser = audioCtx.createAnalyser(); rawAnalyser.fftSize = CFG.fftSize;
+    src.connect(rawAnalyser);
+    rawBuffer = new Float32Array(rawAnalyser.fftSize);
+  }
+}
+
+// RMS de la señal cruda (sin ganancia aplicada)
+function rawRms(){
+  if(!rawAnalyser) return 0;
+  rawAnalyser.getFloatTimeDomainData(rawBuffer);
+  let s=0; for(let i=0;i<rawBuffer.length;i++){ const v=rawBuffer[i]; s+=v*v; }
+  return Math.sqrt(s/rawBuffer.length);
+}
+
+// autoajuste de ganancia: lleva el RMS amplificado de la VOZ cantada al rango objetivo.
+// Solo se llama cuando hay tono claro (canto real), nunca con ruido/silencio.
+function calibrateGain(){
+  const raw = rawRms();
+  if(raw < 0.0008) return;            // demasiado bajo para ser voz: no calibrar
+  const amplified = raw * autoGain;
+  const TARGET = 0.05;                // nivel amplificado deseado para voz cantada
+  const ratio = TARGET / amplified;
+  // ajuste suave (no saltar de golpe) y dentro de límites razonables
+  let next = autoGain * (1 + (ratio-1)*0.15);
+  next = Math.max(2, Math.min(40, next));
+  if(Math.abs(next-autoGain) > 0.05){
+    autoGain = next;
+    if(micGainNode) micGainNode.gain.setTargetAtTime(autoGain, audioCtx.currentTime, 0.05);
+  }
+}
+
+function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
+
+function playTone(freq, ms){
+  return new Promise(res=>{
+    const t=audioCtx.currentTime, dur=ms/1000;
+    const out=audioCtx.createGain();
+    out.gain.setValueAtTime(0.0001,t);
+    out.gain.exponentialRampToValueAtTime(0.5,t+0.012);
+    out.gain.exponentialRampToValueAtTime(0.22,t+0.4);
+    out.gain.exponentialRampToValueAtTime(0.10,t+dur*0.7);
+    out.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    out.connect(audioCtx.destination);
+    const partials=[{m:1,g:1},{m:2,g:.45},{m:3,g:.28},{m:4,g:.16},{m:5,g:.09},{m:6,g:.05}];
+    const oscs=[];
+    partials.forEach(p=>{
+      const o=audioCtx.createOscillator(); o.type="sine"; o.frequency.value=freq*p.m;
+      const g=audioCtx.createGain(); g.gain.setValueAtTime(p.g,t);
+      g.gain.exponentialRampToValueAtTime(p.g*0.04+0.0001,t+dur*0.85);
+      o.connect(g).connect(out); o.start(t); o.stop(t+dur+0.05); oscs.push(o);
+    });
+    oscs[0].onended=()=>res();
+  });
+}
+function blip(freqs,type,dur,vol){
+  const t=audioCtx.currentTime, g=audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur); g.connect(audioCtx.destination);
+  freqs.forEach((f,i)=>{const o=audioCtx.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t+i*dur*0.35);o.connect(g);o.start(t+i*dur*0.35);o.stop(t+dur+0.05);});
+}
+function soundCorrect(){ blip([784,1175,1568],"sine",0.22,0.28); }  // arpegio claro ascendente
+function soundWarn(){ blip([440],"sine",0.10,0.07); }                // muy sutil, breve
+function soundFail(){ blip([160,110],"sawtooth",0.42,0.26); }       // grave, descendente, claro
+
+function autoCorrelate(buf, sr){
+  const SIZE=buf.length; let rms=0;
+  for(let i=0;i<SIZE;i++){const v=buf[i];rms+=v*v;} rms=Math.sqrt(rms/SIZE);
+  if(rms<CFG.rmsMin) return {freq:-1,rms};
+  let r1=0,r2=SIZE-1,thres=0.2;
+  for(let i=0;i<SIZE/2;i++){if(Math.abs(buf[i])<thres){r1=i;break;}}
+  for(let i=1;i<SIZE/2;i++){if(Math.abs(buf[SIZE-i])<thres){r2=SIZE-i;break;}}
+  const tr=buf.slice(r1,r2); const n=tr.length; if(n<64) return {freq:-1,rms};
+  const c=new Array(n).fill(0);
+  for(let lag=0;lag<n;lag++){let s=0;for(let i=0;i<n-lag;i++)s+=tr[i]*tr[i+lag];c[lag]=s;}
+  let d=0; while(d<n-1&&c[d]>c[d+1])d++;
+  let maxval=-1,maxpos=-1; for(let i=d;i<n;i++){if(c[i]>maxval){maxval=c[i];maxpos=i;}}
+  if(maxpos<=0) return {freq:-1,rms};
+  let T0=maxpos; const x1=c[T0-1]||0,x2=c[T0],x3=c[T0+1]||0;
+  const a=(x1+x3-2*x2)/2,b=(x3-x1)/2; if(a)T0=T0-b/(2*a);
+  const freq=sr/T0; if(freq<60||freq>1500) return {freq:-1,rms};
+  return {freq,rms};
+}
+function freqToMidiCents(freq){
+  const mf=69+12*Math.log2(freq/440); const midi=Math.round(mf);
+  return {midi,cents:Math.round((mf-midi)*100)};
+}
+// evaluación por clase de altura (acepta cualquier octava)
+function evaluatePitch(freq, targetMidi){
+  const targetPc=((targetMidi%12)+12)%12;
+  const sungMf=69+12*Math.log2(freq/440);
+  const sungOct=Math.round((sungMf-targetPc)/12);
+  const nearest=targetPc+sungOct*12;
+  const totalCents=1200*Math.log2(freq/midiToFreq(nearest));
+  return {centsAbs:Math.abs(totalCents), dir:totalCents<0?"baja":"alta"};
+}
+
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function getFrame(){ analyser.getFloatTimeDomainData(pitchBuffer); return autoCorrelate(pitchBuffer,audioCtx.sampleRate); }
+
+const debugEl=()=>document.getElementById("debug");
+const warnEl=()=>document.getElementById("signalWarn");
+
+// aviso de nivel de volumen junto a la barra (idx). El "apenas te escucho" + consejo
+// solo aparece si el silencio bajo se sostiene (silenceOk=true).
+function setSignal(idx, rms, silenceOk){
+  const msg = document.getElementById("vumsg"+idx);
+  const warn = warnEl();
+  if(msg){ msg.classList.remove("ok","low","none"); }
+  warn.classList.remove("ok","low","none");
+  if(rms >= CFG.rmsMin){
+    if(msg){ msg.classList.add("show","ok"); msg.textContent = "Nivel de volumen correcto"; }
+    warn.textContent = "";
+  } else if(rms > CFG.rmsMin*0.4){
+    if(msg){ msg.classList.add("show","low"); msg.textContent = "Canta más fuerte"; }
+    warn.textContent = "";
+  } else {
+    // silencio: solo avisar si lleva ya un rato (evita parpadeo constante)
+    if(silenceOk){
+      if(msg){ msg.classList.add("show","none"); msg.textContent = "Apenas te escucho"; }
+      warn.classList.add("none");
+      warn.textContent = "Acércate al micrófono y sube el volumen de entrada en Ajustes › Sonido › Entrada";
+    } else {
+      if(msg){ msg.classList.remove("show"); msg.textContent = ""; }
+      warn.textContent = "";
+    }
+  }
+}
+
+// escucha un intento; devuelve {verdict:"hit"|"miss"|"timeout", dir}
+// prevMidi: nota anterior ya acertada; su "coletazo" se ignora hasta que el alumno se mueve.
+async function listenForNote(targetMidi, statusEl, muteMs, idx, noteIdx, prevMidi){
+  const startT=performance.now(); muteMs=muteMs||0;
+  let good=0,bad=0,lastBad=null,nearDir="",silence=0,noTone=0;
+  let moved=false; // ¿el alumno ya dejó de sostener la nota anterior?
+  const silenceNeeded = Math.round(2000/CFG.frameInterval); // ~2s antes de avisar
+  // solo tiene sentido ignorar la anterior si es de distinta altura que la actual
+  const prevPc = (prevMidi!=null) ? ((prevMidi%12)+12)%12 : null;
+  const targetPc = ((targetMidi%12)+12)%12;
+  const canIgnorePrev = prevPc!=null && prevPc!==targetPc;
+  while(performance.now()-startT<CFG.noteTimeout){
+    if(performance.now()-startT<muteMs){ getFrame(); await sleep(CFG.frameInterval); continue; }
+    const {freq,rms}=getFrame();
+    calibrateGain();   // autoajuste de ganancia basado en la señal cruda (se autolimita a voz)
+    if(rms <= CFG.rmsMin*0.4) silence++; else silence=0;
+    setSignal(idx, rms, silence>=silenceNeeded);
+    if(freq>0 && rms>=CFG.rmsMin){
+      noTone=0;
+      // ¿lo que suena todavía es la nota ANTERIOR? -> es el coletazo, lo ignoramos
+      if(!moved && canIgnorePrev){
+        const prevEval = evaluatePitch(freq, prevMidi);
+        const curEval  = evaluatePitch(freq, targetMidi);
+        // si está claramente más cerca de la anterior que de la actual, esperar
+        if(prevEval.centsAbs < curEval.centsAbs && prevEval.centsAbs <= CFG.centsNear){
+          debugEl().textContent=`(sostiene anterior) ${freq.toFixed(0)}Hz`;
+          await sleep(CFG.frameInterval);
+          continue;
+        }
+        moved = true; // ya canta algo distinto de la anterior: empezamos a evaluar
+      }
+      const {centsAbs,dir}=evaluatePitch(freq,targetMidi);
+      const {midi:sung}=freqToMidiCents(freq);
+      debugEl().textContent=`${freq.toFixed(0)}Hz · ${centsAbs.toFixed(0)}c · ok${good} mal${bad}`;
+      if(centsAbs<=CFG.centsPerfect){
+        good++; bad=0;
+        clearPitchHint(idx);
+        if(good>=CFG.framesNeeded) return {verdict:"hit"};
+      } else {
+        if(lastBad!==null && Math.abs(sung-lastBad)<=1) bad++; else bad=1;
+        lastBad=sung; good=Math.max(0,good-1); nearDir=dir;
+        if(bad>=CFG.framesNeeded) return {verdict:"miss",dir:nearDir};
+      }
+    } else if(rms>=CFG.rmsMin){
+      // hay volumen pero no se detecta una nota clara (voz con aire, ruido…)
+      noTone++;
+      if(noTone>=12){ const w=warnEl(); w.className="signal-warn low"; w.textContent="Mantén la nota con voz clara"; }
+      debugEl().textContent=`sin tono claro · rms ${rms.toFixed(3)}`;
+    } else {
+      good=Math.max(0,good-1); bad=Math.max(0,bad-1); if(bad===0)lastBad=null; noTone=0;
+      moved=true; // un silencio entre notas también cuenta como que soltó la anterior
+      debugEl().textContent=`silencio · rms ${rms.toFixed(3)}`;
+    }
+    await sleep(CFG.frameInterval);
+  }
+  return {verdict:"timeout"};
+}
+
+let running=false;
+
+async function runExercise(e){
+  const ex=CURRENT[e];
+  const exEl=document.getElementById("ex"+e);
+  const statusEl=document.getElementById("status"+e);
+  let correct=0;
+  exEl.classList.add("active");
+  renderExercise(e);
+
+  setExerciseGray(e);
+  statusEl.textContent="Escucha la 1ª nota…";
+  await playTone(midiToFreq(ex.notes[0].midi), CFG.refDuration);
+  await sleep(CFG.startGrayPause);
+  restoreExercise(e);
+
+  for(let i=0;i<ex.notes.length;i++){
+    const tgt=ex.notes[i].midi;
+    setHeadColor(e,i,"#2355ce");
+    clearSoundedLike(e);
+    statusEl.textContent=`Canta la nota ${i+1} de ${ex.notes.length}`;
+    const prevMidi = i>0 ? ex.notes[i-1].midi : null;  // ignorar coletazo de la anterior
+    let res=await listenForNote(tgt, statusEl, CFG.postPianoMute, e, i, prevMidi);
+    if(res.verdict==="hit"){
+      setHeadColor(e,i,"#16a34a"); soundCorrect(); pulseCorrect(e,i);
+      correct++; statusEl.textContent=""; continue;
+    }
+    // 1er fallo: amarillo + sonido sutil + aviso "estás bajo/alto"
+    // (permanece visible hasta que el 2º intento defina el resultado)
+    setHeadColor(e,i,"#f5a623"); soundWarn();
+    setPitchHint(e, i, res.dir || "baja", "estas");
+    statusEl.textContent="Otra vez";
+    await sleep(450);
+    setHeadColor(e,i,"#2355ce");
+    res=await listenForNote(tgt, statusEl, CFG.postPianoMute, e, i);
+    if(res.verdict==="hit"){
+      clearPitchHintFor(e,i);   // acertó al 2º: quitar el aviso de esta nota
+      setHeadColor(e,i,"#16a34a"); soundCorrect(); pulseCorrect(e,i);
+      correct++; statusEl.textContent="";
+    } else {
+      // 2º fallo: rojo + temblor + sonido grave + "quedaste alto/bajo"
+      // (este aviso PERMANECE el resto del ejercicio, como diagnóstico)
+      const failDir = res.dir || "baja";
+      setHeadColor(e,i,"#dc2626"); shakeNote(e,i); soundFail();
+      setPitchHint(e, i, failDir, "quedaste");
+      statusEl.textContent="";
+      await sleep(700);
+      // respuesta correcta: resto en gris, nota correcta en verde, "sonaba así"
+      const saved = snapshotHeadColors(e);
+      setExerciseGray(e);
+      setHeadColor(e,i,"#16a34a");
+      showSoundedLike(e,i);
+      await playTone(midiToFreq(tgt), CFG.refDuration);
+      await sleep(CFG.startGrayPause);
+      clearSoundedLike(e);
+      restoreHeadColors(e, saved);
+      setHeadColor(e,i,"#dc2626");
+    }
+  }
+  const vm=document.getElementById("vumsg"+e); if(vm){ vm.classList.remove("show","ok","low","none"); vm.textContent=""; }
+  clearSoundedLike(e);   // los avisos "quedaste" permanecen como diagnóstico
+  warnEl().textContent=""; warnEl().className="signal-warn";
+  exEl.classList.remove("active");
+  statusEl.textContent=`Hecho · ${correct}/${ex.notes.length}`;
+  document.getElementById("debug").textContent="";
+  await showResult(correct, ex.notes.length);
+}
+
+// overlay de resultado a pantalla completa (verde/amarillo/rojo según aciertos)
+function showResult(correct, total){
+  return new Promise(res=>{
+    const ov=document.getElementById("resultOverlay");
+    const sc=document.getElementById("resultScore");
+    const msg=document.getElementById("resultMsg");
+    ov.classList.remove("good","mid","low","bad");
+    let cls, txt;
+    if(correct>=9){ cls="good"; txt="¡Muy bien!"; }
+    else if(correct>=7){ cls="good"; txt="¡Bien!"; }
+    else if(correct>=5){ cls="mid"; txt="¡Vas bien!"; }
+    else if(correct>=3){ cls="low"; txt="¡Sigue intentándolo!"; }
+    else { cls="bad"; txt="Selecciona intervalos más sencillos para progresar"; }
+    sc.textContent = correct+"/"+total;
+    msg.textContent = txt;
+    ov.classList.add(cls,"on");
+    const dur = correct<3 ? 2600 : 1800; // el mensaje largo se queda algo más
+    setTimeout(()=>{ ov.classList.remove("on"); res(); }, dur);
+  });
+}
+
+// ---------- arranque: un play por ejercicio ----------
+document.querySelectorAll(".ex-play").forEach(btn=>{
+  btn.addEventListener("click", async ()=>{
+    if(running) return;
+    const e = parseInt(btn.dataset.ex,10);
+    running=true;
+    document.querySelectorAll(".ex-play").forEach(b=>b.disabled=true);
+    try{ await initAudio(); }
+    catch(err){ document.getElementById("status"+e).textContent="Sin micrófono: "+err.message;
+      document.querySelectorAll(".ex-play").forEach(b=>b.disabled=false); running=false; return; }
+    await runExercise(e);
+    document.querySelectorAll(".ex-play").forEach(b=>b.disabled=false);
+    running=false;
+  });
+});
+// botón GENERAR (arriba): único que crea ejercicios nuevos
+document.getElementById("genBtn").addEventListener("click", ()=>{ if(running) return; generateAll(); });
+// dado (abajo): SOLO cambia la selección de intervalos al azar, no genera
+document.getElementById("diceBtn").addEventListener("click", ()=>{ if(running) return; diceIntervals(); });
+// todos (abajo): SOLO selecciona todos los intervalos, no genera
+document.getElementById("allBtn").addEventListener("click", ()=>{ if(running) return; selectAll(); });
+
+// modal de bienvenida: botones de selección + aceptar
+document.getElementById("wmDice").addEventListener("click", ()=>{ diceIntervals(); });
+document.getElementById("wmAll").addEventListener("click", ()=>{ selectAll(); });
+document.getElementById("wmAccept").addEventListener("click", ()=>{
+  document.getElementById("welcomeModal").classList.add("hidden");
+  generateAll();   // genera los ejercicios con la selección elegida
+});
+
+// init
+renderIntervalPanel();
+</script>
+</body>
+</html>
