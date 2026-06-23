@@ -244,7 +244,7 @@
 
 <div class="grid" id="grid">
   <div class="ex" id="ex0"><div class="ex-head"><button class="ex-play" data-ex="0" title="Cantar este ejercicio"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button><span class="ex-title">Ejercicio 1</span><span class="ex-status" id="status0"></span><span class="vumsg" id="vumsg0"></span><span class="ex-key" id="key0"></span></div><div class="scoreBox" id="score0"></div></div>
-  <div class="ex" id="ex1"><div class="ex-head"><button class="ex-play" data-ex="1" title="Cantar este ejercicio"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button><span class="ex-title">Ejercicio 2</span><span class="ex-status" id="status1"></span><span class="vumsg" id="vumsg1"></span><span class="ex-key" id="key1"></span></div><div class="scoreBox" id="score1"></div></div>
+
 </div>
 
 <div class="ipanel-label">Intervalos que pueden aparecer</div>
@@ -358,8 +358,22 @@ function noteMidi(letter, acc, octave){
 }
 
 // todas las posiciones (con octava) de un grado de la escala dentro del rango
-const RANGE_LOW = 57;  // La3
-const RANGE_HIGH = 76; // Mi5
+// Rango por clave (dinámico por ejercicio):
+//   clave de sol: La3 (57) .. Mi5 (76)  -> el de siempre
+//   clave de fa:  Sol2 (43) .. Do4 (60)  -> Sol2=línea inferior, Do4=1ª adicional superior
+const RANGE_TREBLE_LOW = 57, RANGE_TREBLE_HIGH = 76;
+const RANGE_BASS_LOW   = 43, RANGE_BASS_HIGH   = 60;
+let RANGE_LOW  = RANGE_TREBLE_LOW;   // activo (se fija antes de generar según la clave)
+let RANGE_HIGH = RANGE_TREBLE_HIGH;
+let CUR_CLEF   = "treble";            // clave del ejercicio que se está generando
+// 50% clave de sol / 50% clave de fa; fija el rango global y CUR_CLEF
+function chooseClef(){
+  const clef = Math.random()<0.5 ? "treble" : "bass";
+  if(clef==="bass"){ RANGE_LOW=RANGE_BASS_LOW; RANGE_HIGH=RANGE_BASS_HIGH; }
+  else             { RANGE_LOW=RANGE_TREBLE_LOW; RANGE_HIGH=RANGE_TREBLE_HIGH; }
+  CUR_CLEF = clef;
+  return clef;
+}
 function placementsInRange(grade){
   const res = [];
   for(let oct=2; oct<=6; oct++){
@@ -519,13 +533,15 @@ function spellMidi(midi){
 function genExercisePro(allowedArr, numNotes){
   numNotes = numNotes || 10;
   const allowed = allowedArr && allowedArr.length ? allowedArr.slice() : Object.keys(INTERVAL_SEMI);
-  // 1ª nota: aleatoria en rango, octava central preferida
-  let startMidi = 60 + Math.floor(Math.random()*8) - 4; // alrededor de Do4
+  // 1ª nota: aleatoria en rango, derivando las octavas válidas del rango activo
+  // (clave de sol: La3..Mi5 -> oct 3-4 ; clave de fa: Sol2..Do4 -> oct 2-3)
+  const octLo = Math.floor(RANGE_LOW/12) - 1;
+  const octHi = Math.floor(RANGE_HIGH/12) - 1;
   // partimos de una nota natural aleatoria
   const baseLetters = ["C","D","E","F","G","A","B"];
   for(let attempt=0; attempt<60; attempt++){
     const L = baseLetters[Math.floor(Math.random()*7)];
-    const oct = 3 + Math.floor(Math.random()*2); // 3 o 4
+    const oct = octLo + Math.floor(Math.random()*(octHi-octLo+1));
     const acc = 0; // 1ª nota natural: minimiza la necesidad de dobles alteraciones
     const m = (oct+1)*12 + LETTER_PC[L] + acc;
     if(m>=RANGE_LOW+2 && m<=RANGE_HIGH-2){
@@ -547,7 +563,7 @@ function genExercisePro(allowedArr, numNotes){
       if(ok && notes.length===numNotes){
         const intervals=[];
         for(let i=1;i<notes.length;i++) intervals.push(intervalName(notes[i-1],notes[i]));
-        return {key:"Pro · interválico", notes, intervals};
+        return {key:"Pro · interválico", notes, intervals, clef:CUR_CLEF};
       }
     }
   }
@@ -592,7 +608,7 @@ function vfKey(n){
 
 let CURRENT = [null,null]; // los 2 ejercicios
 let noteStaveX = [[],[]];  // posiciones por ejercicio
-const NUM_EX = 2;
+const NUM_EX = 1;
 const NUM_NOTES = 10;
 
 // ---------- RENDER de un ejercicio con VexFlow ----------
@@ -602,6 +618,7 @@ function renderExercise(idx){
   [...box.querySelectorAll("svg")].forEach(s=>s.remove());
 
   const ex = CURRENT[idx];
+  const clef = ex.clef || "treble";
   document.getElementById("key"+idx).textContent = ex.key;
 
   // ancho interno fijo y amplio (el CSS lo escala al 100% de la tarjeta).
@@ -614,12 +631,12 @@ function renderExercise(idx){
   ctx.setFont("Arial", 10);
 
   const stave = new VF.Stave(10, 6, width-20);
-  stave.addClef("treble");
+  stave.addClef(clef);
   stave.setContext(ctx).draw();
 
   // notas redondas (solo entonación, sin ritmo)
   const notes = ex.notes.map(n=>{
-    const sn = new VF.StaveNote({clef:"treble", keys:[vfKey(n)], duration:"w"});
+    const sn = new VF.StaveNote({clef:clef, keys:[vfKey(n)], duration:"w"});
     if(n.acc!==0) sn.addModifier(new VF.Accidental(ACC_VF[String(n.acc)]), 0);
     return sn;
   });
@@ -918,7 +935,7 @@ function generateAll(){
     const allowedArr = [...SELECTED];
     for(let i=0;i<NUM_EX;i++){
       let ex=null, tries=0;
-      do{ ex = genExercisePro(allowedArr, NUM_NOTES); tries++; }while(!ex && tries<60);
+      do{ chooseClef(); ex = genExercisePro(allowedArr, NUM_NOTES); tries++; }while(!ex && tries<60);
       CURRENT[i] = ex || genExercisePro(["2m","2M","3m","3M"], NUM_NOTES);
     }
   } else {
