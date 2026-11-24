@@ -614,7 +614,7 @@ const LOCKED_TONAL = new Set(["2m","2M"]);
 let PRO_MODE = true;   // esta página SIEMPRE es Pro (interválico puro)
 function isLocked(name){ return !PRO_MODE && LOCKED_TONAL.has(name); }
 // estado de selección (Set de nombres activos)
-let SELECTED = new Set(["2m","2M","3m","3M","4J","TT","5J","6m","6M","7m","7M","8J"]);
+let SELECTED = new Set(["2m","2M"]);   // (24-nov-2026, Iago) al entrar, solo 2.ª menor y mayor; el alumno añade las demás
 // intervalos con color oscuro -> texto blanco ya va bien; el negro (8J) necesita marca
 const DARK_INTERVALS = new Set(["3m","6m","7m","8J","2m"]);
 
